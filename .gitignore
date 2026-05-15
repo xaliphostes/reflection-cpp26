@@ -3,6 +3,7 @@ bin/
 dist/
 extern/
 output/
+site/
 .cache/
 
 ~*
