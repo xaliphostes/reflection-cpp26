@@ -1,0 +1,11 @@
+build/
+bin/
+dist/
+extern/
+output/
+.cache/
+
+*.cmake
+*.bin
+*.make
+.DS_Store
