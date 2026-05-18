@@ -26,7 +26,7 @@ One C++ description → *everything*:
 - **JSON / YAML / Protobuf serialization** — no schema
 - **Qt / ImGui editors** — GUI for free
 - **REST / RPC** — each method an endpoint
-- **Undo/redo, validation, docs, persistence** — same metadata
+- **Validation, docs, persistence** — same metadata
 
 Today: hand-written, drifting, repeated for each backend.
 **With C++26 reflection: one walk, all of them.**
@@ -420,23 +420,23 @@ Use it where leverage is high: APIs that cross language boundaries, are edited l
 - [Reflection proposal](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2996r13.html)
 - [Python Bindings with Value-Based Reflection](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p2911r0.pdf)
 - [Using Reflection to Replace a Metalanguage for Generating JS Bindings](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p3010r0.pdf)
+- [Short video presentation for bindings](https://www.youtube.com/watch?v=TOKP7k66VBw)
 
 ---
 
 # Want to help building a lib that uses C++26 reflection?
 
-- Core:
+- Core: Extend the possibilities of 
   ```cpp
-  rosetta::reflector<T>();
+  rosetta::register_reflected<T>();
   ```
 
-With extensions (applications) to:
-
-- Generate auto bindings for Python, Java, JavaScript, wasp, REST...
-- Auto-generate Qt panels (using annotation)
-- Binding for Qml
-- Serialization
-- Have another idea ?
+- With extensions (applications) to:
+  - Generate auto bindings for Python, Java, JavaScript, wasp, REST...
+  - Auto-generate Qt panels (using annotation)
+  - Binding for Qml
+  - Serialization
+  - ...
 
 ---
 
