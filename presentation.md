@@ -10,11 +10,25 @@ class: invert
 
 # Reflection in C++26
 
-From P2996 to a 330-line Rosetta
+From P2996 to a 105-line Rosetta
 
 <br>
 
 *Frantz Maerten*, Look Up Geoscience
+
+---
+
+## What is reflection?
+
+> *"The ability of software to expose its internal structure."*
+
+- **Static** reflection: the **compiler** exposes structure at compile time
+- Two new syntactic operators:
+  - **Meta**: `^^` — *reflect-on* a name into a `std::meta::info` value
+  - **Splice**: `[: meta :]` — *reify* a `std::meta::info` back into code
+- Everything that crosses the boundary is `consteval` / `constexpr`
+
+P2996 — one of the **largest** proposals in C++ history.
 
 ---
 
@@ -30,20 +44,6 @@ One C++ description → *everything*:
 
 Today: hand-written, drifting, repeated for each backend.
 **With C++26 reflection: one walk, all of them.**
-
----
-
-## What is reflection?
-
-> *"The ability of software to expose its internal structure."*
-
-- **Static** reflection: the **compiler** exposes structure at compile time
-- Two new syntactic operators:
-  - **Meta**: `^^` — *reflect-on* a name into a `std::meta::info` value
-  - **Splice**: `[: meta :]` — *reify* a `std::meta::info` back into code
-- Everything that crosses the boundary is `consteval` / `constexpr`
-
-P2996 — one of the **largest** proposals in C++ history.
 
 ---
 
@@ -174,6 +174,18 @@ C++ was **the only major language without first-class reflection** — until now
 
 ---
 
+# Supported compilers
+
+| Compilateur | Réflexion C++26 | `template for` | Mainline ? | Quand l'utiliser |
+  |---|---|---|---|---|
+  | **GCC 16.1+** | ✅ Quasi complet | ✅ | ✅ | Production-prototyping aujourd'hui |
+  | **Clang (Bloomberg fork)** | ✅ Quasi complet | ✅ (`-freflection-latest`) | ❌ | Compiler Explorer / dev local |
+  | **Clang mainline** | 🟡 Partiel | 🟡 En cours | ✅ | Pas encore prêt |
+  | **MSVC** | ❌ Rien | ❌ | — | Attendre 2027+ |
+  | **EDG** | 🟡 Partiel | 🟡 | — | Usage interne vendors |
+
+---
+
 ## Rosetta — *before* C++26
 
 For each class, hand-write the registration:
@@ -208,7 +220,7 @@ rosetta::register_reflected<Rectangle>();
 
 That's it. Same registry. Same downstream generators.
 
-**~330 lines** of `register_reflected` machinery — *once*, in the library — and you never touch it again.
+**~105 lines** of `register_reflected` machinery — *once*, in the library — and you never touch it again.
 
 The next 5 slides build that machinery, **one feature at a time**.
 
@@ -444,7 +456,21 @@ Use it where leverage is high: APIs that cross language boundaries, are edited l
 
 ---
 
-# Python binding
+# Rosetta before ➜ after C++26 (lines of code)
+| **Spec** | **Before** | **After** |
+|---|---|---|
+|core|     5,903| 106|
+|common|   2,380|0|
+|js|       1,808| 204|
+|py|       1,553| 90|
+|rest|     3,327|305|
+|wasm|     1,435|102|
+|**Total**|     16,500|807|
+
+
+---
+
+# Example Python binding
 
 ```cpp
 template <typename T> void bind(py::module_ &m, const char *py_name) {
