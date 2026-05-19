@@ -29,10 +29,9 @@ add_link_options(
     -lc++abi
 )
 
-add_executable(hello_reflection hello_reflection.cpp)
-add_executable(register_reflected register_reflected.cpp)
-add_executable(register_overloads register_overloads.cpp)
-add_executable(register_inheritance register_inheritance.cpp)
-
-add_executable(register_annotations register_annotations.cpp)
+add_executable(hello_reflection 1.hello_reflection.cpp)
+add_executable(register_reflected 2.register_reflected.cpp)
+add_executable(register_overloads 3.register_overloads.cpp)
+add_executable(register_inheritance 4.register_inheritance.cpp)
+add_executable(register_annotations 5.register_annotations.cpp)
 target_compile_options(register_annotations PRIVATE -fannotation-attributes)

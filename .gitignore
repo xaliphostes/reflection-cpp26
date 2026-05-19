@@ -1,4 +1,5 @@
 build/
+node_modules/
 bin/
 dist/
 extern/
@@ -6,6 +7,11 @@ output/
 site/
 .cache/
 
+*.dll
+*.so
+*.dylib
+
+*-lock.json
 ~*
 *.cmake
 *.bin

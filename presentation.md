@@ -441,3 +441,37 @@ Use it where leverage is high: APIs that cross language boundaries, are edited l
 ---
 
 # Questions?
+
+---
+
+# Python binding
+
+```cpp
+template <typename T> void bind(py::module_ &m, const char *py_name) {
+    py::class_<T> cls(m, py_name);
+    cls.def(py::init<>());
+
+    // Fields
+    template for (constexpr auto fld : std::define_static_array(std::meta::nonstatic_data_members_of(^^T, ctx))) {
+        if constexpr (ro) {
+            // readonly annotation -> Python read-only property
+            cls.def_property_readonly(name, [](const T &self) -> MemberT {
+                return self.[:fld:]; }, docstr);
+            }
+    }
+    // Methods
+    template for (constexpr auto fn : std::define_static_array(std::meta::members_of(^^T, ctx))) {
+        if constexpr (is_exportable_member_function(fn)) {
+            constexpr auto name  = std::define_static_string(std::meta::identifier_of(fn));
+            constexpr auto m_doc = std::meta::annotation_of_type<doc>(fn);
+            constexpr const char *mdoc = m_doc.has_value() ? m_doc->text : "";
+
+            if constexpr (std::meta::is_static_member(fn)) {
+                cls.def_static(name, &[:fn:], mdoc);
+            } else {
+                cls.def(name, &[:fn:], mdoc);
+            }
+        }
+    }
+}
+```
