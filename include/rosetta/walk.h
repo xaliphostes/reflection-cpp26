@@ -17,7 +17,7 @@
 #pragma once
 
 #include <experimental/meta>
-#include <rosetta/annotations.hpp>
+#include <rosetta/annotations.h>
 #include <type_traits>
 
 namespace rosetta {

@@ -13,7 +13,7 @@
 
 #include <experimental/meta>
 #include <napi.h>
-#include <rosetta/walk.hpp>
+#include <rosetta/walk.h>
 #include <string>
 #include <type_traits>
 #include <utility>

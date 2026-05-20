@@ -239,7 +239,9 @@ rosetta::register_reflected<Circle>();
 rosetta::register_reflected<Rectangle>();
 ```
 
-That's it. Same registry. Same downstream generators.
+That's it:
+- Same registry
+- Same downstream generators
 
 **~105 lines** of `register_reflected` machinery — once, in the library — and *you never touch it again*!
 

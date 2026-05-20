@@ -14,7 +14,7 @@
 
 #include <emscripten/bind.h>
 #include <experimental/meta>
-#include <rosetta/walk.hpp>
+#include <rosetta/walk.h>
 #include <stdexcept>
 #include <string>
 #include <type_traits>

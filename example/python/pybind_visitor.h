@@ -10,7 +10,7 @@
 #include <experimental/meta>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
-#include <rosetta/walk.hpp>
+#include <rosetta/walk.h>
 #include <string>
 #include <type_traits>
 

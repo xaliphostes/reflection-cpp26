@@ -21,7 +21,7 @@
 #include <httplib.h>
 #include <mutex>
 #include <nlohmann/json.hpp>
-#include <rosetta/walk.hpp>
+#include <rosetta/walk.h>
 #include <stdexcept>
 #include <string>
 #include <type_traits>

@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include <rosetta/annotations.hpp>
+#include <rosetta/annotations.h>
 #include <string>
 #include <utility>
 

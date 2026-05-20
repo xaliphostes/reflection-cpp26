@@ -3,8 +3,8 @@
 // Build flags: -freflection -freflection-latest -fannotation-attributes
 // See CMakeLists.txt in this folder.
 
-#include "../person.hpp"
-#include "rest_visitor.hpp"
+#include "../person.h"
+#include "rest_visitor.h"
 #include <cstdio>
 
 int main(int argc, char **argv) {
