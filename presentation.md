@@ -107,7 +107,7 @@ Output:
   radius : double
 ```
 
-No macros, no inheritance, no registration. Just the type.
+No macros, no inheritance, no registration, non intrusif. Just the type.
 
 ---
 
@@ -189,7 +189,7 @@ C++ was **the only major language without first-class reflection** — until now
   | **GCC 16.1+** | ✅ Almost done | ✅ | 
   | **Clang (Bloomberg)** | ✅ Almost done | ✅ (`-freflection-latest`) | 
   | **Clang mainline** | 🟡 Partial | 🟡 In progress |
-  | **MSVC** | ❌ Nothing | ❌ | 
+  | **MSVC** | ❌ | ❌ | 
   | **EDG** | 🟡 Partial | 🟡 | 
 
 ---
@@ -198,7 +198,10 @@ C++ was **the only major language without first-class reflection** — until now
 
 <img src="media/logo-rosetta.png" alt="rosetta" width="300">
 
-A C++ introspection & automatic language binding.
+- A C++ introspection & automatic language binding.
+- Non intrusif
+- Introspection at runtime
+- Hand write registration à la `pybind11`
 
 https://github.com/xaliphostes/rosetta
 

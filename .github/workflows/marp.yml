@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'presentation.md'
+      - 'media/**'
       - '.github/workflows/marp.yml'
   workflow_dispatch:
 
@@ -36,6 +37,9 @@ jobs:
           MARP_USER: root:root
         with:
           args: presentation.md --pdf --allow-local-files -o site/presentation.pdf
+
+      - name: Copy media assets alongside the HTML
+        run: cp -R media site/media
 
       - uses: actions/configure-pages@v5
 
