@@ -22,11 +22,7 @@ From P2996 to a 105-line Rosetta
 
 > *"The ability of software to expose its internal structure."*
 
-- **Static** reflection: the **compiler** exposes structure at compile time
-- Two new syntactic operators:
-  - **Meta**: `^^` — *reflect-on* a name into a `std::meta::info` value
-  - **Splice**: `[: meta :]` — *reify* a `std::meta::info` back into code
-- Everything that crosses the boundary is `consteval` / `constexpr`
+**Static** reflection: the **compiler** exposes structure at compile time
 
 P2996 — one of the **largest** proposals in C++ history.
 
@@ -52,22 +48,22 @@ Today: hand-written, drifting, repeated for each backend.
 ```cpp
 constexpr std::meta::info info = ^^Circle;            // reflect-on a type
 
-typename[: info :] c = {.name = "c", .radius = 1.0};  // splice it back
+typename[: info :] c = {.name = "c", .radius = 1.0};  // splice it back into code
 
 // also works on members, expressions, namespaces, templates...
 ```
 
+- Everything that crosses the boundary is `consteval` / `constexpr`
 - `^^T` lifts the *name* `T` into a constexpr value (`std::meta::info`)
 - `[: info :]` drops a `std::meta::info` value back into a *type*, *expression*, or *member*
 
 ---
 
-## Our running example
+## A running example
 
 ```cpp
 struct Shape {
     std::string name;
-
     virtual double area() const { return 0.0; }
     std::string    describe() const { return "I am a " + name; }
     static int     next_id() { return ++id_; }
@@ -75,8 +71,14 @@ private:
     static inline int id_ = 0;
 };
 
-struct Circle    : Shape { double radius;        double area() const override; };
-struct Rectangle : Shape { double width, height; double area() const override; };
+struct Circle    : Shape {
+    double radius;
+    double area() const override;
+};
+struct Rectangle : Shape {
+    double width, height;
+    double area() const override;
+};
 ```
 
 We'll grow this same example through the rest of the deck.
@@ -86,14 +88,15 @@ We'll grow this same example through the rest of the deck.
 ## Hello, reflection — enumerate `Circle`'s fields
 
 ```cpp
-constexpr auto ctx = std::meta::access_context::current();
+constexpr auto members = std::define_static_array(
+    std::meta::nonstatic_data_members_of(^^Circle, ctx));
 
-template for (constexpr auto m :
-    std::define_static_array(
-        std::meta::nonstatic_data_members_of(^^Circle, ctx))) {
-    std::println("  {} : {}",
+template for (constexpr auto m : members) {
+    std::println(
+        "  {} : {}",
         std::meta::identifier_of(m),
-        std::meta::display_string_of(std::meta::type_of(m)));
+        std::meta::display_string_of(std::meta::type_of(m))
+    );
 }
 ```
 
@@ -138,20 +141,25 @@ C++ historically lacked native reflection → **dozens** of libraries with diffe
 | **Unreal UHT** | codegen | `UCLASS` | full + GC + Blueprint |
 | **SWIG** | codegen | none | multi-language bindings |
 
-No single library wins — each picks a different point on the axes.
-
 ---
 
 ## Why not earlier? — every other language has this
 
 | Language | Runtime | Compile-time | Idiom |
-|---|:-:|:-:|---|
+|---|---|---|---|
 | **Python** | 🟢 deep | ⚪ | `inspect`, `getattr`, decorators |
 | **C#** | 🟢 native | 🟢 source generators | `System.Reflection` + attributes |
 | **Java** | 🟢 native | 🟡 processors | `java.lang.reflect` |
 | **JavaScript** | 🟢 Proxy | ⚪ | `Reflect`, `Object.*` |
 | **Go** | 🟢 (slow) | ⚪ | `reflect` + struct tags |
 | **Rust** | 🔴 minimal | 🟢 proc-macros | `derive`, `serde`, `bevy_reflect` |
+
+---
+
+## Why not earlier? — every other language has this (continue..)
+
+| Language | Runtime | Compile-time | Idiom |
+|---|---|---|---|
 | **D** | 🟡 partial | 🟢 `__traits` + CTFE | `__traits(allMembers, T)` |
 | **Zig** | ⚪ | 🟢 `comptime` | `@typeInfo`, `inline for` |
 | **C++ < 26** | 🟡 RTTI | 🟡 TMP, libraries | RTTR / PFR / codegen |
@@ -174,15 +182,25 @@ C++ was **the only major language without first-class reflection** — until now
 
 ---
 
-# Supported compilers
+## Supported compilers
 
-| Compilateur | Réflexion C++26 | `template for` | Mainline ? | Quand l'utiliser |
-  |---|---|---|---|---|
-  | **GCC 16.1+** | ✅ Quasi complet | ✅ | ✅ | Production-prototyping aujourd'hui |
-  | **Clang (Bloomberg fork)** | ✅ Quasi complet | ✅ (`-freflection-latest`) | ❌ | Compiler Explorer / dev local |
-  | **Clang mainline** | 🟡 Partiel | 🟡 En cours | ✅ | Pas encore prêt |
-  | **MSVC** | ❌ Rien | ❌ | — | Attendre 2027+ |
-  | **EDG** | 🟡 Partiel | 🟡 | — | Usage interne vendors |
+| Compiler | Reflexion C++26 | `template for` |
+  |---|---|---|
+  | **GCC 16.1+** | ✅ Almost done | ✅ | 
+  | **Clang (Bloomberg)** | ✅ Almost done | ✅ (`-freflection-latest`) | 
+  | **Clang mainline** | 🟡 Partial | 🟡 In progress |
+  | **MSVC** | ❌ Nothing | ❌ | 
+  | **EDG** | 🟡 Partial | 🟡 | 
+
+---
+
+## The example of Rosetta
+
+<img src="media/logo-rosetta.png" alt="rosetta" width="300">
+
+A C++ introspection & automatic language binding.
+
+https://github.com/xaliphostes/rosetta
 
 ---
 
@@ -220,7 +238,7 @@ rosetta::register_reflected<Rectangle>();
 
 That's it. Same registry. Same downstream generators.
 
-**~105 lines** of `register_reflected` machinery — *once*, in the library — and you never touch it again.
+**~105 lines** of `register_reflected` machinery — once, in the library — and *you never touch it again*!
 
 The next 5 slides build that machinery, **one feature at a time**.
 
@@ -423,6 +441,7 @@ Use it where leverage is high: APIs that cross language boundaries, are edited l
 - **One consteval walk** does what hand-written glue did in 6000 lines
 - The same `info` value becomes a **type**, an **expression**, or a **member access** — that's what makes it composable
 - **Annotations (P3394)** let metadata live *next to* the declaration it describes
+- The `template for() {}`
 - Runtime registries (Rosetta, RTTR, EnTT) don't disappear — they get **auto-filled**
 
 ---
@@ -456,7 +475,9 @@ Use it where leverage is high: APIs that cross language boundaries, are edited l
 
 ---
 
-# Rosetta before ➜ after C++26 (lines of code)
+---
+
+# Rosetta before and after C++26 (lines of code)
 | **Spec** | **Before** | **After** |
 |---|---|---|
 |core|     5,903| 106|
