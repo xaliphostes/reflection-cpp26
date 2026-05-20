@@ -48,8 +48,6 @@ namespace rosetta {
             std::lock_guard lk(m_);
             return map_.erase(id) > 0;
         }
-        // Snapshot of all (id, T*) pairs — caller holds no lock; do not retain.
-        // Useful only for diagnostic endpoints in this demo.
 
     private:
         std::mutex                 m_;
@@ -125,34 +123,7 @@ namespace rosetta {
         std::string      base; // e.g. "/Person"
         Store<T>        *store_ptr;
 
-        template <std::meta::info Fld> void field_plain(const char *name, const char * /*doc*/) {
-            using F       = [:std::meta::type_of(Fld):];
-            auto *sp      = store_ptr;
-            auto  get_url = base + R"(/(\d+)/)" + name;
-            auto  put_url = get_url;
-
-            server.Get(get_url, [sp](const httplib::Request &req, httplib::Response &res) {
-                T *p = detail::resolve_id(sp, req, res);
-                if (!p)
-                    return;
-                res.set_content(json(p->[:Fld:]).dump(), "application/json");
-            });
-
-            server.Put(put_url, [sp](const httplib::Request &req, httplib::Response &res) {
-                T *p = detail::resolve_id(sp, req, res);
-                if (!p)
-                    return;
-                try {
-                    p->[:Fld:] = json::parse(req.body).template get<F>();
-                    res.status = 204;
-                } catch (const std::exception &e) {
-                    res.status = 400;
-                    res.set_content(json{{"error", e.what()}}.dump(), "application/json");
-                }
-            });
-        }
-
-        template <std::meta::info Fld> void field_readonly(const char *name, const char * /*doc*/) {
+        template <std::meta::info Fld, auto... Anns> void field(const char *name) {
             using F   = [:std::meta::type_of(Fld):];
             auto *sp  = store_ptr;
             auto  url = base + R"(/(\d+)/)" + name;
@@ -164,49 +135,52 @@ namespace rosetta {
                 res.set_content(json(p->[:Fld:]).dump(), "application/json");
             });
 
-            server.Put(url, [name](const httplib::Request &, httplib::Response &res) {
-                res.status = 403;
-                res.set_content(json{{"error", std::string(name) + " is read-only"}}.dump(),
-                                "application/json");
-            });
-        }
-
-        template <std::meta::info Fld, double Rmin, double Rmax>
-        void field_ranged(const char *name, const char * /*doc*/) {
-            using F   = [:std::meta::type_of(Fld):];
-            auto *sp  = store_ptr;
-            auto  url = base + R"(/(\d+)/)" + name;
-
-            server.Get(url, [sp](const httplib::Request &req, httplib::Response &res) {
-                T *p = detail::resolve_id(sp, req, res);
-                if (!p)
-                    return;
-                res.set_content(json(p->[:Fld:]).dump(), "application/json");
-            });
-
-            server.Put(url, [sp, name](const httplib::Request &req, httplib::Response &res) {
-                T *p = detail::resolve_id(sp, req, res);
-                if (!p)
-                    return;
-                try {
-                    F      val = json::parse(req.body).template get<F>();
-                    double d   = static_cast<double>(val);
-                    if (d < Rmin || d > Rmax) {
-                        res.status = 400;
-                        res.set_content(json{{"error", std::string(name) + " out of range"}}.dump(),
-                                        "application/json");
+            if constexpr (ann::has<readonly>(Anns...)) {
+                server.Put(url, [name](const httplib::Request &, httplib::Response &res) {
+                    res.status = 403;
+                    res.set_content(json{{"error", std::string(name) + " is read-only"}}.dump(),
+                                    "application/json");
+                });
+            } else if constexpr (ann::has<range>(Anns...) && std::is_arithmetic_v<F>) {
+                constexpr auto r = ann::get_or<range>(range{0, 0}, Anns...);
+                server.Put(url, [sp, name](const httplib::Request &req, httplib::Response &res) {
+                    T *p = detail::resolve_id(sp, req, res);
+                    if (!p)
                         return;
+                    try {
+                        F      val = json::parse(req.body).template get<F>();
+                        double d   = static_cast<double>(val);
+                        if (d < r.min || d > r.max) {
+                            res.status = 400;
+                            res.set_content(
+                                json{{"error", std::string(name) + " out of range"}}.dump(),
+                                "application/json");
+                            return;
+                        }
+                        p->[:Fld:] = val;
+                        res.status = 204;
+                    } catch (const std::exception &e) {
+                        res.status = 400;
+                        res.set_content(json{{"error", e.what()}}.dump(), "application/json");
                     }
-                    p->[:Fld:] = val;
-                    res.status = 204;
-                } catch (const std::exception &e) {
-                    res.status = 400;
-                    res.set_content(json{{"error", e.what()}}.dump(), "application/json");
-                }
-            });
+                });
+            } else {
+                server.Put(url, [sp](const httplib::Request &req, httplib::Response &res) {
+                    T *p = detail::resolve_id(sp, req, res);
+                    if (!p)
+                        return;
+                    try {
+                        p->[:Fld:] = json::parse(req.body).template get<F>();
+                        res.status = 204;
+                    } catch (const std::exception &e) {
+                        res.status = 400;
+                        res.set_content(json{{"error", e.what()}}.dump(), "application/json");
+                    }
+                });
+            }
         }
 
-        template <std::meta::info Fn> void method_instance(const char *name, const char * /*doc*/) {
+        template <std::meta::info Fn, auto... /*Anns*/> void method_instance(const char *name) {
             auto *sp  = store_ptr;
             auto  url = base + R"(/(\d+)/)" + name;
 
@@ -228,7 +202,7 @@ namespace rosetta {
             });
         }
 
-        template <std::meta::info Fn> void method_static(const char *name, const char * /*doc*/) {
+        template <std::meta::info Fn, auto... /*Anns*/> void method_static(const char *name) {
             auto url = base + "/" + name;
 
             server.Post(url, [](const httplib::Request &req, httplib::Response &res) {

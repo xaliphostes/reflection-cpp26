@@ -5,7 +5,7 @@
 //   - rosetta::Wrap<T> — CRTP Napi::ObjectWrap holding T + per-Fld/per-Fn
 //     member-function templates whose addresses feed InstanceAccessor /
 //     InstanceMethod / StaticMethod as NTTPs
-//   - rosetta::NapiVisitor<T> — five visitor methods that push descriptors
+//   - rosetta::NapiVisitor<T> — three visitor methods that push descriptors
 //   - rosetta::bind_napi<T>(env, name) — entry point: runs the walk and
 //     calls Wrap<T>::DefineClass
 
@@ -68,14 +68,13 @@ namespace rosetta {
             inner.[:Fld:] = from_napi<FieldT>(v);
         }
 
-        template <std::meta::info Fld, double Rmin, double Rmax>
-        void set_field_ranged(const Napi::CallbackInfo &info,
-                              const Napi::Value &v) {
+        template <std::meta::info Fld, rosetta::range R>
+        void set_field_ranged(const Napi::CallbackInfo &info, const Napi::Value &v) {
             using FieldT        = [:std::meta::type_of(Fld):];
             constexpr auto name = std::define_static_string(std::meta::identifier_of(Fld));
             FieldT         val  = from_napi<FieldT>(v);
             double         d    = static_cast<double>(val);
-            if (d < Rmin || d > Rmax) {
+            if (d < R.min || d > R.max) {
                 throw Napi::RangeError::New(info.Env(), std::string(name) + " out of range");
             }
             inner.[:Fld:] = val;
@@ -144,34 +143,32 @@ namespace rosetta {
         using This = Wrap<T>;
         std::vector<Napi::ClassPropertyDescriptor<This>> &props;
 
-        template <std::meta::info Fld>
-        void field_plain(const char *name, const char * /*doc*/) {
-            props.push_back(This::template InstanceAccessor<&This::template get_field<Fld>,
-                                                            &This::template set_field<Fld>>(name));
+        template <std::meta::info Fld, auto... Anns> void field(const char *name) {
+            using F = [:std::meta::type_of(Fld):];
+
+            if constexpr (ann::has<readonly>(Anns...)) {
+                props.push_back(
+                    This::template InstanceAccessor<&This::template get_field<Fld>,
+                                                    &This::template set_field_readonly<Fld>>(
+                        name));
+            } else if constexpr (ann::has<range>(Anns...) && std::is_arithmetic_v<F>) {
+                constexpr auto r = ann::get_or<range>(range{0, 0}, Anns...);
+                props.push_back(
+                    This::template InstanceAccessor<&This::template get_field<Fld>,
+                                                    &This::template set_field_ranged<Fld, r>>(
+                        name));
+            } else {
+                props.push_back(
+                    This::template InstanceAccessor<&This::template get_field<Fld>,
+                                                    &This::template set_field<Fld>>(name));
+            }
         }
 
-        template <std::meta::info Fld>
-        void field_readonly(const char *name, const char * /*doc*/) {
-            props.push_back(
-                This::template InstanceAccessor<&This::template get_field<Fld>,
-                                                &This::template set_field_readonly<Fld>>(name));
-        }
-
-        template <std::meta::info Fld, double Rmin, double Rmax>
-        void field_ranged(const char *name, const char * /*doc*/) {
-            props.push_back(
-                This::template InstanceAccessor<&This::template get_field<Fld>,
-                                                &This::template set_field_ranged<Fld, Rmin, Rmax>>(
-                    name));
-        }
-
-        template <std::meta::info Fn>
-        void method_instance(const char *name, const char * /*doc*/) {
+        template <std::meta::info Fn, auto... /*Anns*/> void method_instance(const char *name) {
             props.push_back(This::template InstanceMethod<&This::template call_method<Fn>>(name));
         }
 
-        template <std::meta::info Fn>
-        void method_static(const char *name, const char * /*doc*/) {
+        template <std::meta::info Fn, auto... /*Anns*/> void method_static(const char *name) {
             props.push_back(This::template StaticMethod<&This::template call_static<Fn>>(name));
         }
     };

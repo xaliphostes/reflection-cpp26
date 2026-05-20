@@ -1,26 +1,58 @@
-// One consteval walk over T's reflected members. The walk decides which
-// shape each field/method takes (readonly / ranged / plain, instance /
-// static) and calls into a backend-specific visitor.
+// One consteval walk over T's reflected members. Each field/method is
+// passed to the visitor together with its *full annotation pack* as
+// non-type template parameters; the visitor decides which annotations
+// it cares about — there is no per-shape entry-point in the walker.
 //
-// Visitor concept — five `consteval`-template members:
+// Visitor concept — three `consteval`-template members:
 //
-//   v.template field_plain    <Fld>                 (name, doc)
-//   v.template field_readonly <Fld>                 (name, doc)
-//   v.template field_ranged   <Fld, Rmin, Rmax>     (name, doc)
-//   v.template method_instance<Fn>                  (name, doc)
-//   v.template method_static  <Fn>                  (name, doc)
+//   v.template field          <Fld, Anns...>(name);
+//   v.template method_instance<Fn,  Anns...>(name);
+//   v.template method_static  <Fn,  Anns...>(name);
 //
-// `Fld` / `Fn` are `std::meta::info` NTTPs; `name` and `doc` are
-// `const char*` pointing to static storage (via define_static_string).
-// `Rmin` / `Rmax` are `double` NTTPs baked into each ranged instantiation.
+// `Fld` / `Fn` are `std::meta::info` NTTPs. `Anns...` is a pack of
+// annotation values (`auto...`) — each entry can be any structural
+// annotation type (rosetta::doc, rosetta::range, rosetta::readonly, or
+// future kinds like widget, alias, deprecated). `name` is a
+// `const char*` to static storage (via define_static_string).
+//
+// Helpers `rosetta::ann::has<A>(Anns...)` and
+// `rosetta::ann::get_or<A>(fallback, Anns...)` let visitors query the
+// pack without writing the fold/if-constexpr boilerplate themselves.
 
 #pragma once
 
 #include <experimental/meta>
 #include <rosetta/annotations.h>
 #include <type_traits>
+#include <utility>
 
 namespace rosetta {
+
+    // -------- annotation pack helpers --------
+    //
+    // Both helpers take the annotation pack as runtime arguments (still
+    // constant expressions because each Anns value flows through unchanged).
+    // Call style at the visitor:
+    //     ann::has<readonly>(Anns...)
+    //     ann::get_or<doc>(doc{""}, Anns...).text
+    namespace ann {
+
+        template <typename A> consteval bool has(auto... anns) {
+            return (std::same_as<std::remove_cvref_t<decltype(anns)>, A> || ...);
+        }
+
+        // First annotation of type A in the pack, or `fallback` if absent.
+        template <typename A> consteval A get_or(A fallback, auto... anns) {
+            A result = fallback;
+            ([&] {
+                if constexpr (std::same_as<std::remove_cvref_t<decltype(anns)>, A>) {
+                    result = anns;
+                }
+            }(), ...);
+            return result;
+        }
+
+    } // namespace ann
 
     // Keep regular and static methods; drop constructors/destructors and
     // the compiler-generated copy/move specials.
@@ -35,38 +67,28 @@ namespace rosetta {
         // -------- fields --------
         template for (constexpr auto fld :
                       std::define_static_array(std::meta::nonstatic_data_members_of(^^T, ctx))) {
+            constexpr auto name = std::define_static_string(std::meta::identifier_of(fld));
+            constexpr auto anns = std::define_static_array(std::meta::annotations_of(fld));
 
-            using FieldT               = [:std::meta::type_of(fld):];
-            constexpr auto        name = std::define_static_string(std::meta::identifier_of(fld));
-            constexpr auto        doc_opt   = std::meta::annotation_of_type<doc>(fld);
-            constexpr auto        range_opt = std::meta::annotation_of_type<range>(fld);
-            constexpr bool        ro     = std::meta::annotation_of_type<readonly>(fld).has_value();
-            constexpr const char *docstr = doc_opt.has_value() ? doc_opt->text : "";
-
-            if constexpr (ro) {
-                v.template field_readonly<fld>(name, docstr);
-            } else if constexpr (range_opt.has_value() && std::is_arithmetic_v<FieldT>) {
-                constexpr double rmin = range_opt->min;
-                constexpr double rmax = range_opt->max;
-                v.template field_ranged<fld, rmin, rmax>(name, docstr);
-            } else {
-                v.template field_plain<fld>(name, docstr);
-            }
+            [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+                v.template field<fld, ([:std::meta::constant_of(anns[Is]):])...>(name);
+            }(std::make_index_sequence<anns.size()>{});
         }
 
         // -------- methods (instance + static) --------
         template for (constexpr auto fn :
                       std::define_static_array(std::meta::members_of(^^T, ctx))) {
             if constexpr (is_exportable_member_function(fn)) {
-                constexpr auto name      = std::define_static_string(std::meta::identifier_of(fn));
-                constexpr auto m_doc_opt = std::meta::annotation_of_type<doc>(fn);
-                constexpr const char *mdoc = m_doc_opt.has_value() ? m_doc_opt->text : "";
+                constexpr auto name = std::define_static_string(std::meta::identifier_of(fn));
+                constexpr auto anns = std::define_static_array(std::meta::annotations_of(fn));
 
-                if constexpr (std::meta::is_static_member(fn)) {
-                    v.template method_static<fn>(name, mdoc);
-                } else {
-                    v.template method_instance<fn>(name, mdoc);
-                }
+                [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+                    if constexpr (std::meta::is_static_member(fn)) {
+                        v.template method_static<fn, ([:std::meta::constant_of(anns[Is]):])...>(name);
+                    } else {
+                        v.template method_instance<fn, ([:std::meta::constant_of(anns[Is]):])...>(name);
+                    }
+                }(std::make_index_sequence<anns.size()>{});
             }
         }
     }
