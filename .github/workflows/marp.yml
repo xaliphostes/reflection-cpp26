@@ -24,6 +24,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Stage media assets alongside the HTML
+        run: mkdir -p site && cp -R media site/media
+
       - name: Render presentation.md with Marp
         uses: docker://marpteam/marp-cli:latest
         env:
@@ -37,9 +40,6 @@ jobs:
           MARP_USER: root:root
         with:
           args: presentation.md --pdf --allow-local-files -o site/presentation.pdf
-
-      - name: Copy media assets alongside the HTML
-        run: cp -R media site/media
 
       - uses: actions/configure-pages@v5
 
