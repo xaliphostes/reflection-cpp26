@@ -10,7 +10,7 @@ Go to the `tests/` folder and type
 cmake -G Ninja -B build && cmake --build build
 ```
 
-## Example
+## Auto Binding Examples (Python, node, REST, wasm)
 
 Go to the `example/` folder and read [this file](example/README.md).
 
@@ -19,3 +19,8 @@ This folder presents auto-binding for
 2. JavaScript (node)
 3. REST
 4. Webassembly
+
+## Author
+
+[xaliphostes](https://github.com/xaliphostes)
+

@@ -37,18 +37,25 @@ namespace rosetta {
     //     ann::get_or<doc>(doc{""}, Anns...).text
     namespace ann {
 
+        /**
+         * @brief Check if an annotation of type A is present in the pack.
+         */
         template <typename A> consteval bool has(auto... anns) {
             return (std::same_as<std::remove_cvref_t<decltype(anns)>, A> || ...);
         }
 
-        // First annotation of type A in the pack, or `fallback` if absent.
+        /**
+         * @brief Get the first annotation of type A in the pack, or return a fallback value if absent.
+         */
         template <typename A> consteval A get_or(A fallback, auto... anns) {
             A result = fallback;
-            ([&] {
-                if constexpr (std::same_as<std::remove_cvref_t<decltype(anns)>, A>) {
-                    result = anns;
-                }
-            }(), ...);
+            (
+                [&] {
+                    if constexpr (std::same_as<std::remove_cvref_t<decltype(anns)>, A>) {
+                        result = anns;
+                    }
+                }(),
+                ...);
             return result;
         }
 
@@ -61,6 +68,9 @@ namespace rosetta {
                !std::meta::is_destructor(fn) && !std::meta::is_special_member_function(fn);
     }
 
+    /**
+     * @brief Walk over reflected members of T and pass them to the visitor.
+     */
     template <typename T, typename Visitor> void walk(Visitor &v) {
         constexpr auto ctx = std::meta::access_context::current();
 
@@ -84,9 +94,11 @@ namespace rosetta {
 
                 [&]<std::size_t... Is>(std::index_sequence<Is...>) {
                     if constexpr (std::meta::is_static_member(fn)) {
-                        v.template method_static<fn, ([:std::meta::constant_of(anns[Is]):])...>(name);
+                        v.template method_static<fn, ([:std::meta::constant_of(anns[Is]):])...>(
+                            name);
                     } else {
-                        v.template method_instance<fn, ([:std::meta::constant_of(anns[Is]):])...>(name);
+                        v.template method_instance<fn, ([:std::meta::constant_of(anns[Is]):])...>(
+                            name);
                     }
                 }(std::make_index_sequence<anns.size()>{});
             }

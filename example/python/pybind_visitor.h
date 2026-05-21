@@ -22,13 +22,12 @@ namespace rosetta {
         py::class_<T> &cls;
 
         template <std::meta::info Fld, auto... Anns> void field(const char *name) {
-            using F                    = [:std::meta::type_of(Fld):];
-            constexpr auto        dann = ann::get_or<doc>(doc{""}, Anns...);
+            using F                      = [:std::meta::type_of(Fld):];
+            constexpr auto        dann   = ann::get_or<doc>(doc{""}, Anns...);
             constexpr const char *docstr = dann.text;
 
             if constexpr (ann::has<readonly>(Anns...)) {
-                cls.def_property_readonly(
-                    name, [](const T &s) -> F { return s.[:Fld:]; }, docstr);
+                cls.def_property_readonly(name, [](const T &s) -> F { return s.[:Fld:]; }, docstr);
             } else if constexpr (ann::has<range>(Anns...) && std::is_arithmetic_v<F>) {
                 constexpr auto r = ann::get_or<range>(range{0, 0}, Anns...);
                 cls.def_property(
