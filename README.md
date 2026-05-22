@@ -12,7 +12,7 @@ cmake -G Ninja -B build && cmake --build build
 
 ## Auto Binding Examples (Python, node, REST, wasm)
 
-Go to the `example/` folder and read [this file](example/README.md).
+Go to the `examples/bindings` folder and read [this file](examples/bindings/README.md).
 
 This folder presents auto-binding for
 1. Python

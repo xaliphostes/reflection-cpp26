@@ -35,3 +35,7 @@ add_executable(register_overloads 3.register_overloads.cpp)
 add_executable(register_inheritance 4.register_inheritance.cpp)
 add_executable(register_annotations 5.register_annotations.cpp)
 target_compile_options(register_annotations PRIVATE -fannotation-attributes)
+
+add_executable(docgen 6.docgen.cpp)
+target_include_directories(docgen PRIVATE ${CMAKE_SOURCE_DIR}/../include)
+target_compile_options(docgen PRIVATE -fannotation-attributes)
