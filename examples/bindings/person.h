@@ -10,9 +10,14 @@
 #include <utility>
 
 struct Person {
-    [[= rosetta::doc{"the person's display name"}]] std::string name;
-    [[ = rosetta::doc{"age in whole years"}, = rosetta::range{0.0, 150.0} ]] int age = 0;
-    [[ = rosetta::doc{"server-assigned identifier"}, = rosetta::readonly{} ]] std::string id;
+    [[= rosetta::doc{"the person's display name"}]]
+    std::string name;
+
+    [[ = rosetta::doc{"age in whole years"}, = rosetta::range{0.0, 150.0} ]]
+    int age = 0;
+
+    [[ = rosetta::doc{"server-assigned identifier"}, = rosetta::readonly{} ]]
+    std::string id;
 
     Person() = default;
     Person(std::string n, int a, std::string i) : name(std::move(n)), age(a), id(std::move(i)) {}
