@@ -297,7 +297,7 @@ consteval {
 // Synthesized is now: struct Synthesized { int id; double value; };
 ```
 
-Etonish, nein ? 😀
+Etonish, nein ? 😀 (cf, "*La Minute nécessaire de monsieur Cyclopède*")
 
 ---
 
@@ -308,7 +308,7 @@ Etonish, nein ? 😀
 - A C++ introspection & automatic language binding.
 - Non intrusif
 - Introspection **at runtime**
-- Hand write registration à la `pybind11`
+- Hand written registration à la `pybind11`
 
 https://github.com/xaliphostes/rosetta
 
@@ -440,7 +440,7 @@ One `[[=doc{...}, =range{...}]] double radius;` is **simultaneously**:
 
 ```cpp
 struct Person {
-    [[= rosetta::doc{"the person's display name"}]]
+    [[ = rosetta::doc{"the person's display name"} ]]
     std::string name;
 
     [[ = rosetta::doc{"age in whole years"}, = rosetta::range{0.0, 150.0} ]]
@@ -452,7 +452,7 @@ struct Person {
     Person() = default;
     Person(std::string n, int a, std::string i): name(std::move(n)), age(a), id(std::move(i)) {}
 
-    [[= rosetta::doc{"Returns a greeting prefixed by the given salutation."}]]
+    [[ = rosetta::doc{"Returns a greeting prefixed by the given salutation."} ]]
     std::string greet(const std::string &salutation) const {
         return salutation + ", " + name + "!";
     }
@@ -489,17 +489,6 @@ engine.rootContext()->setContextProperty("inspector", &reflected);
 ![qml](media/qml.png)
 
 </div>
-
----
-
-## When *not* to use reflection
-
-- **Hot inner loops** — virtual dispatch and `Any` boxing have measurable cost; keep numerical kernels typed.
-- **Tiny throw-away tools** — registration is overhead if no extension needs it.
-- **Highly templated header-only math types** — nothing to expose.
-- **When compile-time reflection alone covers your needs** — skip the runtime registry.
-
-Use it where leverage is high: APIs that cross language boundaries, are edited live, persisted, validated, documented, versioned — **application-shaped code**, not algorithmic kernels.
 
 ---
 
