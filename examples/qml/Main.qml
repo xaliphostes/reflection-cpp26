@@ -191,7 +191,7 @@ ApplicationWindow {
                         spacing: 8
 
                         Label {
-                            text: modelData.name + "(" + modelData.arity + ")"
+                            text: modelData.name
                                   + (modelData.isStatic ? " [static]" : "")
                             color: "#bbb"
                             Layout.preferredWidth: 160

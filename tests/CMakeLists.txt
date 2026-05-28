@@ -34,6 +34,7 @@ add_executable(register_reflected 2.register_reflected.cpp)
 add_executable(register_overloads 3.register_overloads.cpp)
 add_executable(register_inheritance 4.register_inheritance.cpp)
 add_executable(register_annotations 5.register_annotations.cpp)
+add_executable(serialization 7.serialization_reflection.cpp)
 target_compile_options(register_annotations PRIVATE -fannotation-attributes)
 
 add_executable(docgen 6.docgen.cpp)

@@ -8,13 +8,13 @@ class: invert
 
 <!-- _class: invert lead -->
 
-# Reflection in C++26
+# Reflection in C++26 (P2996)
 
-From P2996 to a 105-line Rosetta
+*Frantz Maerten*, Look Up Geoscience
 
 <br>
 
-*Frantz Maerten*, Look Up Geoscience
+June 11, 2026
 
 ---
 
@@ -32,14 +32,12 @@ P2996 — one of the **largest** proposals in C++ history.
 
 One C++ description → *everything*:
 
-- **Python / JS / WASM bindings** — auto-generated
-- **JSON / YAML / Protobuf serialization** — no schema
-- **Qt / ImGui editors** — GUI for free
-- **REST / RPC** — each method an endpoint
-- **Validation, docs, persistence** — same metadata
-
-Today: hand-written, drifting, repeated for each backend.
-**With C++26 reflection: one walk, all of them.**
+- **Automatic serialization / deserialization**
+- **Generic struct printing / debugging**
+- **Compile-time generation of types via splicers**
+- **Doc generation** (md, html...)
+- Annotations (P3394, paired with reflection) let you attach compile-time metadata to declarations and read it back via reflection, supporting things like validation rules or serialization hints.
+- ...
 
 ---
 
@@ -48,7 +46,7 @@ Today: hand-written, drifting, repeated for each backend.
 ```cpp
 constexpr std::meta::info info = ^^Circle;            // reflect-on a type
 
-typename[: info :] c = {.name = "c", .radius = 1.0};  // splice it back into code
+typename [: info :] c = {.name = "c", .radius = 1.0};  // splice it back into code
 
 // also works on members, expressions, namespaces, templates...
 ```
@@ -56,58 +54,6 @@ typename[: info :] c = {.name = "c", .radius = 1.0};  // splice it back into cod
 - Everything that crosses the boundary is `consteval` / `constexpr`
 - `^^T` lifts the *name* `T` into a constexpr value (`std::meta::info`)
 - `[: info :]` drops a `std::meta::info` value back into a *type*, *expression*, or *member*
-
----
-
-## A running example
-
-```cpp
-struct Shape {
-    std::string name;
-    virtual double area() const { return 0.0; }
-    std::string    describe() const { return "I am a " + name; }
-    static int     next_id() { return ++id_; }
-private:
-    static inline int id_ = 0;
-};
-
-struct Circle    : Shape {
-    double radius;
-    double area() const override;
-};
-struct Rectangle : Shape {
-    double width, height;
-    double area() const override;
-};
-```
-
-We'll grow this same example through the rest of the deck.
-
----
-
-## Hello, reflection — enumerate `Circle`'s fields
-
-```cpp
-constexpr auto members = std::define_static_array(
-    std::meta::nonstatic_data_members_of(^^Circle, ctx));
-
-template for (constexpr auto m : members) {
-    std::println(
-        "  {} : {}",
-        std::meta::identifier_of(m),
-        std::meta::display_string_of(std::meta::type_of(m))
-    );
-}
-```
-
-Output:
-
-```
-  name   : std::string
-  radius : double
-```
-
-No macros, no inheritance, no registration, non intrusif. Just the type.
 
 ---
 
@@ -120,7 +66,6 @@ Every reflection system trades along the same axes:
 | **When** | Compile-time only ↔ Runtime-queryable |
 | **Intrusiveness** | Non-intrusive ↔ Macros / annotations required |
 | **Source of metadata** | Native compiler ↔ External codegen ↔ Manual |
-| **Coverage** | Aggregates only ↔ Methods + virtuals + private |
 | **Target use** | Serialization ↔ Bindings ↔ GUIs ↔ RPC |
 
 C++ historically lacked native reflection → **dozens** of libraries with different philosophies.
@@ -148,21 +93,9 @@ C++ historically lacked native reflection → **dozens** of libraries with diffe
 | Language | Runtime | Compile-time | Idiom |
 |---|---|---|---|
 | **Python** | 🟢 deep | ⚪ | `inspect`, `getattr`, decorators |
-| **C#** | 🟢 native | 🟢 source generators | `System.Reflection` + attributes |
 | **Java** | 🟢 native | 🟡 processors | `java.lang.reflect` |
 | **JavaScript** | 🟢 Proxy | ⚪ | `Reflect`, `Object.*` |
-| **Go** | 🟢 (slow) | ⚪ | `reflect` + struct tags |
 | **Rust** | 🔴 minimal | 🟢 proc-macros | `derive`, `serde`, `bevy_reflect` |
-
----
-
-## Why not earlier? — every other language has this (continue..)
-
-| Language | Runtime | Compile-time | Idiom |
-|---|---|---|---|
-| **D** | 🟡 partial | 🟢 `__traits` + CTFE | `__traits(allMembers, T)` |
-| **Zig** | ⚪ | 🟢 `comptime` | `@typeInfo`, `inline for` |
-| **C++ < 26** | 🟡 RTTI | 🟡 TMP, libraries | RTTR / PFR / codegen |
 | **C++26** | 🟡 build manually | 🟢 P2996 | `^^T`, `[: r :]`, `consteval` |
 
 C++ was **the only major language without first-class reflection** — until now.
@@ -171,8 +104,7 @@ C++ was **the only major language without first-class reflection** — until now
 
 ## Lessons from the neighbours
 
-- **D** is the spiritual ancestor of P2996 — `__traits` + CTFE + `static foreach` shaped the C++26 design.
-- **Zig** confirms the philosophy: `comptime` *is* the reflection.
+- **D** is the spiritual ancestor of P2996 — `__traits` + `static foreach` shaped the C++26 design.
 - **Rust `bevy_reflect`** proves runtime registries can stay idiomatic.
 - **Go's struct tags** map cleanly onto P3394 annotations.
 - **C# attributes + source generators** — cleanest runtime/codegen hybrid.
@@ -194,13 +126,188 @@ C++ was **the only major language without first-class reflection** — until now
 
 ---
 
+## A running example
+
+```cpp
+struct Point {
+    int    x;
+    int    y;
+    double z;
+    double norm() const { return ...; }
+    Point scale(double) const { return ...; }
+};
+```
+
+---
+
+## Enumerate `Point`'s fields
+
+```cpp
+constexpr auto ctx = std::meta::access_context::current();
+
+constexpr auto fields = std::define_static_array(std::meta::nonstatic_data_members_of(^^Point, ctx));
+
+template for (constexpr auto f : fields) {
+    std::println(
+        "  {} : {}",
+        std::meta::identifier_of(f),
+        std::meta::display_string_of(std::meta::type_of(f))
+    );
+}
+```
+
+Output:
+
+```
+  x : int
+  y : int
+  z : double
+```
+
+No macros, no inheritance, no registration, non intrusif. Just the type.
+
+---
+
+## Enumerate `Point`'s methods
+
+```cpp
+constexpr auto members = std::define_static_array(std::meta::members_of(^^Point, ctx));
+
+template for (constexpr auto m : members) {
+    if constexpr (is_exportable_member_function(m)) {
+        std::print("  {} {}(", std::meta::display_string_of(std::meta::return_type_of(m)),
+                    std::meta::identifier_of(m));
+
+        bool first = true;
+        template for (constexpr auto param: std::define_static_array(std::meta::parameters_of(m))) {
+            if (!first) std::print(", ");
+            first = false;
+            std::print("{}", std::meta::display_string_of(std::meta::type_of(param)));
+        }
+        std::println(")");
+    }
+}
+```
+
+Output:
+
+```
+  double norm()
+  Point scale(double)
+```
+
+---
+
+## Simple JSON-ish serialization
+
+```cpp
+template <typename T>
+std::string to_json(const T& obj) {
+    std::string out = "{";
+    bool first = true;
+    template for (constexpr auto m : std::define_static_array(
+                      std::meta::nonstatic_data_members_of(^^T))) {
+        if (!first) out += ",";
+        first = false;
+        out += '"';
+        out += std::meta::identifier_of(m);
+        out += "\":";
+        out += serialize_value(obj.[:m:]);  // your per-type value formatter
+    }
+    out += "}";
+    return out;
+}
+```
+
+---
+
+# Serialization example
+
+```cpp
+enum class Color { Red, Green, Blue };
+
+struct Address {
+    std::string street;
+    int         number;
+};
+
+struct Person {
+    std::string              name;
+    int                      age;
+    bool                     active;
+    Color                    favorite_color;
+    Address                  home;
+    std::vector<std::string> tags;
+};
+
+int main() {
+    Person p{
+        .name           = "Alice",
+        .age            = 30,
+        .active         = true,
+        .favorite_color = Color::Green,
+        .home           = {"Rue Pasteur", 42},
+        .tags           = {"admin", "ops"},
+    };
+
+    std::println("{}", to_json(p));
+}
+```
+
+---
+
+# Serialization result
+
+```json
+{
+    "name": "Alice",
+    "age": 30,
+    "active": true,
+    "favorite_color": "Green",
+    "home": {
+        "street": "Rue Pasteur",
+        "number": 42
+    },
+    "tags": [
+        "admin",
+        "ops"
+    ]
+}
+```
+
+---
+
+## Aggregate example
+
+Use `std::meta::define_aggregate`:
+(previsouly called `std::meta::define_class` in draft)
+
+```cpp
+#include <meta>
+
+struct Synthesized;  // incomplete — to be defined
+
+consteval {
+    std::meta::define_aggregate(^^Synthesized, {
+        std::meta::data_member_spec(^^int,    {.name = "id"}),
+        std::meta::data_member_spec(^^double, {.name = "value"}),
+    });
+}
+
+// Synthesized is now: struct Synthesized { int id; double value; };
+```
+
+Etonish, nein ? 😀
+
+---
+
 ## The example of Rosetta
 
 <img src="media/logo-rosetta.png" alt="rosetta" width="300">
 
 - A C++ introspection & automatic language binding.
 - Non intrusif
-- Introspection at runtime
+- Introspection **at runtime**
 - Hand write registration à la `pybind11`
 
 https://github.com/xaliphostes/rosetta
@@ -233,6 +340,8 @@ Real numbers from our internal lib: **~6000 lines** of glue.
 
 ## Rosetta — *with* C++26
 
+Use C++ annotations (P3394) for doc, readonly, numeric range, alias, displayed-name...
+
 ```cpp
 rosetta::register_reflected<Shape>();
 rosetta::register_reflected<Circle>();
@@ -243,124 +352,24 @@ That's it:
 - Same registry
 - Same downstream generators
 
-**~105 lines** of `register_reflected` machinery — once, in the library — and *you never touch it again*!
-
-The next 5 slides build that machinery, **one feature at a time**.
+**~100 lines** of `register_reflected` machinery — once, in the library — and *you never touch it again*!
 
 ---
 
-## Step 1 — fields, automatically
-
-```cpp
-template <typename T> void register_reflected() {
-    constexpr auto ctx = std::meta::access_context::current();
-    ClassMeta &cls = Registry::instance().get_or_create(
-        std::meta::identifier_of(^^T));
-
-    template for (constexpr auto m :
-        std::define_static_array(
-            std::meta::nonstatic_data_members_of(^^T, ctx))) {
-        cls.fields[std::string(std::meta::identifier_of(m))] = FieldMeta{
-            .get = [](void* o) -> Any { return static_cast<T*>(o)->[: m :]; },
-            .set = [](void* o, const Any& v) {
-                static_cast<T*>(o)->[: m :] =
-                    std::any_cast<[: std::meta::type_of(m) :]>(v);
-            },
-        };
-    }
-}
-```
-
-`register_reflected<Circle>()` ⇒ `name`, `radius` queryable by string at runtime.
+# Rosetta before and after C++26 (# lines of code)
+| **Spec** | **Before** | **After** |
+|---|---|---|
+|core|     5,903| 106|
+|common|   2,380|0|
+|js|       1,808| 204|
+|py|       1,553| 90|
+|rest|     3,327|305|
+|wasm|     1,435|102|
+|**Total**|     16,500|807|
 
 ---
 
-## Step 2 — methods (the invoker trick)
-
-```cpp
-template <typename T, std::meta::info Fn, std::size_t... Is>
-auto make_invoker(std::index_sequence<Is...>) {
-    return [](void *obj, std::span<const Any> args) -> Any {
-        constexpr auto params =
-            std::define_static_array(std::meta::parameters_of(Fn));
-        return Any{(static_cast<T *>(obj)->[: Fn :])(
-            std::any_cast<std::remove_cvref_t<
-                typename[: std::meta::type_of(params[Is]) :]>>(args[Is])...)};
-    };
-}
-```
-
-Splice the function + each parameter's type, `any_cast` the runtime args. Stateless lambda — no captures.
-
-```cpp
-cls->invoke("describe", &circle, {});  // → "I am a unit-circle"
-```
-
----
-
-## Step 3 — overloads
-
-Same name, different signatures → bucket by name, dispatch by `type_index`.
-
-```cpp
-struct Shape {
-    void scale(double k);
-    void scale(double kx, double ky);   // overload
-};
-
-cls->invoke("scale", &s, rosetta::args(2.0));        // → scale(double)
-cls->invoke("scale", &s, rosetta::args(2.0, 3.0));   // → scale(double, double)
-```
-
-`ClassMeta::methods` becomes `unordered_map<string, vector<MethodMeta>>` — walk the bucket, exact-match on argument types.
-
----
-
-## Step 4 — inheritance
-
-Walk `bases_of(^^Self)` first; register inherited members **as if** they were the derived's own.
-
-```cpp
-rosetta::register_reflected<Circle>();
-
-const auto* cls = Registry::find("Circle");
-cls->invoke("describe", &c, {});       // ← inherited from Shape, works
-cls->invoke("area",     &c, {});       // ← virtual override, resolves correctly
-cls->invoke("next_id",  nullptr, {});  // ← static method, no instance
-```
-
-Inherited invokers do `static_cast<Self*>(static_cast<Derived*>(obj))` — the implicit derived-to-base conversion expressed via two splices.
-
----
-
-## Step 5 — annotations (P3394)
-
-Metadata travels **with** the field declaration:
-
-```cpp
-struct Circle : Shape {
-    [[=rosetta::doc{"radius in meters"},
-      =rosetta::range{0.0, 1e6}]]
-    double radius;
-
-    [[=rosetta::doc{"server-assigned"}, =rosetta::readonly{}]]
-    std::string id;
-};
-```
-
-Extract at compile time inside the walk:
-
-```cpp
-constexpr auto doc_opt   = std::meta::annotation_of_type<doc>(m);
-constexpr auto range_opt = std::meta::annotation_of_type<range>(m);
-constexpr bool ro        = std::meta::annotation_of_type<readonly>(m).has_value();
-```
-
-Setter shape chosen with `if constexpr` — read-only throws, ranged validates, otherwise plain assign.
-
----
-
-## Applications — Language bindings
+## Applications — Auto language bindings
 
 One C++ description, **N hosts**:
 
@@ -378,6 +387,17 @@ The alternative is **N hand-maintained binding files** that drift as the C++ API
 
 ---
 
+## Applications — Validation · Docs · Persistence · Live
+
+- **Validation** — range, regex, not-null, cross-field invariants (from annotations).
+- **Documentation** — Markdown / HTML / OpenAPI / Sphinx from `doc("…")`.
+- **Persistence / ORM** — `CREATE TABLE`, migrations from class diffs.
+- **Configuration & DI** — config-file → object hydration, CLI flag generation.
+- **Live scripting / REPL** — every method auto-callable from the console.
+- **Testing** — property-based, fuzzing, snapshot tests, binding-coverage.
+
+---
+
 ## Applications — Serialization · GUI · REST
 
 **Serialize:** JSON / XML / YAML / TOML / CBOR / MsgPack / Protobuf / HDF5 — *no schema needed*.
@@ -385,8 +405,9 @@ The alternative is **N hand-maintained binding files** that drift as the C++ API
 **GUI generation:**
 
 - Qt property editors (`ObjectInspector<Circle>` for free)
-- ImGui debug panels — sliders, color pickers, drag-floats per field
 - QML data binding, web forms, Blueprint-style node editors
+- ImGui debug panels — sliders, color pickers, drag-floats per field
+- ...
 
 **REST / RPC:** each method → endpoint, each parameter → JSON field.
 
@@ -398,19 +419,7 @@ for (auto cls : registry.list_classes())
 
 ---
 
-## Applications — Validation · Docs · Persistence · Live
-
-- **Validation** — range, regex, not-null, cross-field invariants (from annotations).
-- **Documentation** — Markdown / HTML / OpenAPI / Sphinx from `doc("…")`.
-- **Persistence / ORM** — `CREATE TABLE`, migrations from class diffs.
-- **Undo/Redo** — generic `SetFieldCommand` round-tripping through the registry.
-- **Configuration & DI** — config-file → object hydration, CLI flag generation.
-- **Live scripting / REPL** — every method auto-callable from the console.
-- **Testing** — property-based, fuzzing, snapshot tests, binding-coverage.
-
----
-
-## Composition is the leverage
+## Annotation is the leverage
 
 One `[[=doc{...}, =range{...}]] double radius;` is **simultaneously**:
 
@@ -418,14 +427,68 @@ One `[[=doc{...}, =range{...}]] double radius;` is **simultaneously**:
 - A JavaScript getter/setter
 - A REST endpoint
 - A JSON-serializable element
-- An ImGui slider with the right bounds
 - A Qt property in the inspector
-- An undo-redo target
 - A documented entry in the reference
 - A range-validated database column
-- A telemetry metric
+- ...
 
 > **Every line of registration unlocks features across multiple subsystems at once.**
+
+---
+
+## QML example
+
+```cpp
+struct Person {
+    [[= rosetta::doc{"the person's display name"}]]
+    std::string name;
+
+    [[ = rosetta::doc{"age in whole years"}, = rosetta::range{0.0, 150.0} ]]
+    int age = 0;
+
+    [[ = rosetta::doc{"server-assigned identifier"}, = rosetta::readonly{} ]]
+    std::string id;
+
+    Person() = default;
+    Person(std::string n, int a, std::string i): name(std::move(n)), age(a), id(std::move(i)) {}
+
+    [[= rosetta::doc{"Returns a greeting prefixed by the given salutation."}]]
+    std::string greet(const std::string &salutation) const {
+        return salutation + ", " + name + "!";
+    }
+
+    void clear() {
+        name.clear();
+        age = 0;
+    }
+};
+```
+
+---
+
+## QML example (suite)
+
+<style scoped>
+section { display: flex; flex-direction: column; }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: center; }
+.cols pre { margin: 0; font-size: 0.6em; }
+.cols img { width: 100%; }
+</style>
+
+<div class="cols">
+
+```cpp
+Person person;
+rosetta::ReflectedObject reflected;
+rosetta::bind_qml<Person>(&reflected, person);
+
+QQmlApplicationEngine engine;
+engine.rootContext()->setContextProperty("inspector", &reflected);
+```
+
+![qml](media/qml.png)
+
+</div>
 
 ---
 
@@ -440,17 +503,6 @@ Use it where leverage is high: APIs that cross language boundaries, are edited l
 
 ---
 
-# What C++26 brings
-
-- **`^^` + `[: :]`** — the entire surface area; the rest is library
-- **One consteval walk** does what hand-written glue did in 6000 lines
-- The same `info` value becomes a **type**, an **expression**, or a **member access** — that's what makes it composable
-- **Annotations (P3394)** let metadata live *next to* the declaration it describes
-- The `template for() {}`
-- Runtime registries (Rosetta, RTTR, EnTT) don't disappear — they get **auto-filled**
-
----
-
 # References
 
 - [Reflection proposal](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2996r13.html)
@@ -458,41 +510,12 @@ Use it where leverage is high: APIs that cross language boundaries, are edited l
 - [Using Reflection to Replace a Metalanguage for Generating JS Bindings](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p3010r0.pdf)
 - [Short video presentation for bindings](https://www.youtube.com/watch?v=TOKP7k66VBw)
 
----
-
-# Want to help building a lib that uses C++26 reflection?
-
-- Core: Extend the possibilities of 
-  ```cpp
-  rosetta::register_reflected<T>();
-  ```
-
-- With extensions (applications) to:
-  - Generate auto bindings for Python, Java, JavaScript, wasp, REST...
-  - Auto-generate Qt panels (using annotation)
-  - Binding for Qml
-  - Serialization
-  - ...
 
 ---
 
 # Questions?
 
 ---
-
----
-
-# Rosetta before and after C++26 (lines of code)
-| **Spec** | **Before** | **After** |
-|---|---|---|
-|core|     5,903| 106|
-|common|   2,380|0|
-|js|       1,808| 204|
-|py|       1,553| 90|
-|rest|     3,327|305|
-|wasm|     1,435|102|
-|**Total**|     16,500|807|
-
 
 ---
 
