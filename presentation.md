@@ -439,20 +439,25 @@ One `[[=doc{...}, =range{...}]] double radius;` is **simultaneously**:
 ## QML example
 
 ```cpp
+using namespace rosetta;
+
 struct Person {
-    [[ = rosetta::doc{"the person's display name"} ]]
+    [[ = doc{"the person's display name"} ]]
     std::string name;
 
-    [[ = rosetta::doc{"age in whole years"}, = rosetta::range{0.0, 150.0} ]]
+    [[ = doc{"age in whole years"}, = range{0.0, 150.0}, = widget::slider ]]
     int age = 0;
 
-    [[ = rosetta::doc{"server-assigned identifier"}, = rosetta::readonly{} ]]
+    [[ = doc{"server-assigned identifier"}, = readonly{} ]]
     std::string id;
+
+    [[ = rosetta::doc{"favourite colour"}, = rosetta::combobox{{"red", "green", "blue", "yellow"}} ]]
+    std::string color = "red";
 
     Person() = default;
     Person(std::string n, int a, std::string i): name(std::move(n)), age(a), id(std::move(i)) {}
 
-    [[ = rosetta::doc{"Returns a greeting prefixed by the given salutation."} ]]
+    [[ = doc{"Returns a greeting prefixed by the given salutation."} ]]
     std::string greet(const std::string &salutation) const {
         return salutation + ", " + name + "!";
     }
@@ -492,13 +497,50 @@ engine.rootContext()->setContextProperty("inspector", &reflected);
 
 ---
 
+## Playing with C++26 to recreate the Qt `moc`
+
+Qt's moc is a separate code generator. It parses headers, emits .moc
+files, links them in. It's been a Qt fixture for 25 years.
+
+C++26 reflection makes it… optional.
+
+```cpp
+class Thermostat {
+public:
+    [[= moc::signal]] moc::Signal<double> temperatureChanged;
+
+    [[= moc::property{"temperature", "temperatureChanged"}]]
+    double m_temperature = 20.0;
+};
+```
+
+No .moc file. No build step. Just a header.
+
+---
+
+```cpp
+Thermostat th;
+Display    d;
+
+moc::connect<"temperatureChanged", "showTemperature">(th, d);
+
+moc::set<"temperature">(th, 19.8); // fires temperatureChanged(19.8)
+moc::set<"temperature">(th, 19.8); // equality-gated, silent
+```
+
+Three failure modes, all at compile time:
+- typo'd signal name → static_assert: "no [[=signal]]-tagged member"
+- typo'd slot name → static_assert: "no [[=slot]]-tagged member"
+- mismatched types → template error at the lambda body
+
+---
+
 # References
 
 - [Reflection proposal](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2996r13.html)
 - [Python Bindings with Value-Based Reflection](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p2911r0.pdf)
 - [Using Reflection to Replace a Metalanguage for Generating JS Bindings](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p3010r0.pdf)
 - [Short video presentation for bindings](https://www.youtube.com/watch?v=TOKP7k66VBw)
-
 
 ---
 
