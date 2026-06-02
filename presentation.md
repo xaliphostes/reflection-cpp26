@@ -24,7 +24,7 @@ June 11, 2026
 
 **Static** reflection: the **compiler** exposes structure at compile time
 
-P2996 — one of the **largest** proposals in C++ history.
+P2996 — one of the **largest** proposals in C++ history since the introduction of templates.
 
 ---
 
@@ -50,6 +50,7 @@ typename [: info :] c = {.name = "c", .radius = 1.0};  // splice it back into co
 
 // also works on members, expressions, namespaces, templates...
 ```
+`^^` aka - cat-ears operator <br><br>
 
 - Everything that crosses the boundary is `consteval` / `constexpr`
 - `^^T` lifts the *name* `T` into a constexpr value (`std::meta::info`)
@@ -66,7 +67,7 @@ Every reflection system trades along the same axes:
 | **When** | Compile-time only ↔ Runtime-queryable |
 | **Intrusiveness** | Non-intrusive ↔ Macros / annotations required |
 | **Source of metadata** | Native compiler ↔ External codegen ↔ Manual |
-| **Target use** | Serialization ↔ Bindings ↔ GUIs ↔ RPC |
+| **Target use** | Serialization ↔ GUIs ↔ RPC |
 
 C++ historically lacked native reflection → **dozens** of libraries with different philosophies.
 
@@ -180,7 +181,7 @@ template for (constexpr auto m : members) {
 
         bool first = true;
         template for (constexpr auto param: std::define_static_array(std::meta::parameters_of(m))) {
-            if (!first) std::print(", ");
+            if (!first) {std::print(", ");}
             first = false;
             std::print("{}", std::meta::display_string_of(std::meta::type_of(param)));
         }
@@ -212,7 +213,7 @@ std::string to_json(const T& obj) {
         out += '"';
         out += std::meta::identifier_of(m);
         out += "\":";
-        out += serialize_value(obj.[:m:]);  // your per-type value formatter
+        out += serialize_value(obj.[:m:]);  // user per-type value formatter
     }
     out += "}";
     return out;
@@ -294,7 +295,8 @@ consteval {
     });
 }
 
-// Synthesized is now: struct Synthesized { int id; double value; };
+// Synthesized is now:
+struct Synthesized {int id; double value;};
 ```
 
 Etonish, nein ? 😀 (cf, "*La Minute nécessaire de monsieur Cyclopède*")
@@ -303,14 +305,14 @@ Etonish, nein ? 😀 (cf, "*La Minute nécessaire de monsieur Cyclopède*")
 
 ## The example of Rosetta
 
-<img src="media/logo-rosetta.png" alt="rosetta" width="300">
+<img src="media/logo-rosetta.png" alt="rosetta2" width="300">
 
 - A C++ introspection & automatic language binding.
 - Non intrusif
 - Introspection **at runtime**
 - Hand written registration à la `pybind11`
 
-https://github.com/xaliphostes/rosetta
+https://github.com/xaliphostes/rosetta2
 
 ---
 
@@ -350,7 +352,7 @@ rosetta::register_reflected<Rectangle>();
 
 That's it:
 - Same registry
-- Same downstream generators
+- Simplified downstream generators
 
 **~100 lines** of `register_reflected` machinery — once, in the library — and *you never touch it again*!
 
@@ -371,7 +373,7 @@ That's it:
 
 ## Applications — Auto language bindings
 
-One C++ description, **N hosts**:
+One C++ description, **N hosts** (visitors):
 
 | Target | What reflection drives |
 |---|---|
@@ -494,6 +496,37 @@ engine.rootContext()->setContextProperty("inspector", &reflected);
 ![qml](media/qml.png)
 
 </div>
+
+---
+
+## Qt example
+
+<style scoped>
+section { display: flex; flex-direction: column; }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: center; }
+.cols pre { margin: 0; font-size: 0.6em; }
+.cols img { width: 100%; }
+</style>
+
+<div class="cols">
+
+```cpp
+class Algo {
+public:
+    double      eps{1e-7};
+    int         maxIter{100};
+    bool        iterative{true};
+    std::string solverName{"Seidel"};
+    
+    double run() {return 1e-8;}
+    void   reset() {}
+};
+
+Algo algo;
+QWidget *inspector = rosetta::build_inspector<Algo>(algo, "Algo");
+```
+
+![qml](media/qt.png)
 
 ---
 
