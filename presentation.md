@@ -542,6 +542,40 @@ QWidget *inspector = rosetta::build_inspector<Algo>(algo, "Algo");
 
 ---
 
+## Doc generation example
+
+```cpp
+#include <rosetta/docgen.h>
+#include "Algo.h"
+
+const auto md = rosetta::generate_markdown<Algo>();
+```
+
+---
+
+### Algo
+
+#### Fields
+
+| Name | Type | Description |
+|------|------|-------------|
+| `eps` | `double` | Tolerence of the solver (range: 1e-10..1e-06) |
+| `maxIter` | `int` | Set the max iterations (range: 0..200) |
+| `iterative` | `bool` | Tell if the solver must be iterative |
+| `solverName` | `std::string` | Solver name (choices: Seidel, Jacobi, gmres, cgnr) |
+
+#### Methods
+
+##### `run() → double`
+
+Run the solver and return the convergence
+
+##### `reset() → void`
+
+Reset the solver
+
+---
+
 ## Playing with C++26 to recreate the Qt `moc`
 
 Qt's moc is a separate code generator. It parses headers, emits .moc
