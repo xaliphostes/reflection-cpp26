@@ -24,6 +24,10 @@ June 11, 2026
 
 **Static** reflection: the **compiler** exposes structure at compile time
 
+- Inspection of types, members, functions, and annotations
+- Automatic C++ code generation at compile time
+- Expressive compile-time metaprogramming without macros
+
 P2996 — one of the **largest** proposals in C++ history since the introduction of templates.
 
 ---
@@ -46,7 +50,7 @@ One C++ description → *everything*:
 ```cpp
 constexpr std::meta::info info = ^^Circle;            // reflect-on a type
 
-typename [: info :] c = {.name = "c", .radius = 1.0};  // splice it back into code
+typename [: info :] c = {.name = "c", .radius = 1.0}; // splice it back into code
 
 // also works on members, expressions, namespaces, templates...
 ```
@@ -58,18 +62,9 @@ typename [: info :] c = {.name = "c", .radius = 1.0};  // splice it back into co
 
 ---
 
-## Why not earlier? — the design space
+## Why not earlier?
 
-Every reflection system trades along the same axes:
 
-| Axis | Endpoints |
-|---|---|
-| **When** | Compile-time only ↔ Runtime-queryable |
-| **Intrusiveness** | Non-intrusive ↔ Macros / annotations required |
-| **Source of metadata** | Native compiler ↔ External codegen ↔ Manual |
-| **Target use** | Serialization ↔ GUIs ↔ RPC |
-
-C++ historically lacked native reflection → **dozens** of libraries with different philosophies.
 
 ---
 
@@ -103,21 +98,9 @@ C++ was **the only major language without first-class reflection** — until now
 
 ---
 
-## Lessons from the neighbours
-
-- **D** is the spiritual ancestor of P2996 — `__traits` + `static foreach` shaped the C++26 design.
-- **Rust `bevy_reflect`** proves runtime registries can stay idiomatic.
-- **Go's struct tags** map cleanly onto P3394 annotations.
-- **C# attributes + source generators** — cleanest runtime/codegen hybrid.
-
-> C++26 closes the **language-level** gap.
-> Runtime registries (Rosetta, RTTR, EnTT) don't go away — they get **auto-filled**.
-
----
-
 ## Supported compilers
 
-| Compiler | Reflexion C++26 | `template for` |
+| Compiler | Reflexion C++26 | `template for` (expansion statement) |
   |---|---|---|
   | **GCC 16.1+** | ✅ Almost done | ✅ | 
   | **Clang (Bloomberg)** | ✅ Almost done | ✅ (`-freflection-latest`) | 
@@ -148,7 +131,7 @@ constexpr auto ctx = std::meta::access_context::current();
 
 constexpr auto fields = std::define_static_array(std::meta::nonstatic_data_members_of(^^Point, ctx));
 
-template for (constexpr auto f : fields) {
+template for (constexpr auto f : fields) { // expansion statement
     std::println(
         "  {} : {}",
         std::meta::identifier_of(f),
@@ -174,7 +157,7 @@ No macros, no inheritance, no registration, non intrusif. Just the type.
 ```cpp
 constexpr auto members = std::define_static_array(std::meta::members_of(^^Point, ctx));
 
-template for (constexpr auto m : members) {
+template for (constexpr auto m : members) { // expansion statement
     if constexpr (is_exportable_member_function(m)) {
         std::print("  {} {}(", std::meta::display_string_of(std::meta::return_type_of(m)),
                     std::meta::identifier_of(m));
@@ -303,6 +286,16 @@ Etonish, nein ? 😀 (cf, "*La Minute nécessaire de monsieur Cyclopède*")
 
 ---
 
+## Better Etonish!
+
+```cpp
+constexpr auto v = [: parse_json(json_data) :];
+```
+
+Means: "Run `parse_json(json_data)` at **compile time**, obtain a reflected representation of some C++ entity or expression, and substitute the corresponding C++ code here."
+
+---
+
 ## The example of Rosetta
 
 <img src="media/logo-rosetta.png" alt="rosetta2" width="300">
@@ -393,16 +386,16 @@ The alternative is **N hand-maintained binding files** that drift as the C++ API
 
 - **Validation** — range, regex, not-null, cross-field invariants (from annotations).
 - **Documentation** — Markdown / HTML / OpenAPI / Sphinx from `doc("…")`.
-- **Persistence / ORM** — `CREATE TABLE`, migrations from class diffs.
-- **Configuration & DI** — config-file → object hydration, CLI flag generation.
-- **Live scripting / REPL** — every method auto-callable from the console.
+- **Persistence / ORM (object relational mapping)** — `CREATE TABLE`, migrations from class diffs.
+- **Configuration & DI (dependency injection)** — config-file → object hydration, CLI flag generation.
+- **Live scripting / REPL (read-eval-print loop)** — every method auto-callable from the console.
 - **Testing** — property-based, fuzzing, snapshot tests, binding-coverage.
 
 ---
 
 ## Applications — Serialization · GUI · REST
 
-**Serialize:** JSON / XML / YAML / TOML / CBOR / MsgPack / Protobuf / HDF5 — *no schema needed*.
+**Serialize:** JSON / XML / YAML / TOML / Protobuf / ... — *no schema needed*.
 
 **GUI generation:**
 
@@ -440,6 +433,15 @@ One `[[=doc{...}, =range{...}]] double radius;` is **simultaneously**:
 
 ## QML example
 
+<style scoped>
+section { display: flex; flex-direction: column; }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: center; }
+.cols pre { margin: 0; font-size: 0.6em; }
+.cols img { width: 100%; }
+</style>
+
+<div class="cols">
+
 ```cpp
 using namespace rosetta;
 
@@ -447,13 +449,17 @@ struct Person {
     [[ = doc{"the person's display name"} ]]
     std::string name;
 
-    [[ = doc{"age in whole years"}, = range{0.0, 150.0}, = widget::slider ]]
+    [[ = doc{"age in whole years"}, 
+       = range{0.0, 150.0}, 
+       = widget::slider ]]
     int age = 0;
 
-    [[ = doc{"server-assigned identifier"}, = readonly{} ]]
+    [[ = doc{"server-assigned identifier"}, 
+       = readonly{} ]]
     std::string id;
 
-    [[ = rosetta::doc{"favourite colour"}, = rosetta::combobox{{"red", "green", "blue", "yellow"}} ]]
+    [[ = rosetta::doc{"favourite colour"}, 
+       = rosetta::combobox{{"red", "green", "blue", "yellow"}} ]]
     std::string color = "red";
 
     Person() = default;
@@ -469,22 +475,7 @@ struct Person {
         age = 0;
     }
 };
-```
 
----
-
-## QML example (suite)
-
-<style scoped>
-section { display: flex; flex-direction: column; }
-.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: center; }
-.cols pre { margin: 0; font-size: 0.6em; }
-.cols img { width: 100%; }
-</style>
-
-<div class="cols">
-
-```cpp
 Person person;
 rosetta::ReflectedObject reflected;
 rosetta::bind_qml<Person>(&reflected, person);
@@ -513,13 +504,34 @@ section { display: flex; flex-direction: column; }
 ```cpp
 class Algo {
 public:
-    double      eps{1e-7};
-    int         maxIter{100};
-    bool        iterative{true};
+
+    [[ = rosetta::doc{"Tolerence of the solver"},
+       = rosetta::range{1e-10, 1e-6},
+       = rosetta::widget::textfield, = rosetta::label{"EPS"} ]]
+    double eps{1e-7};
+
+    [[ = rosetta::doc{"Set the max iterations"}, 
+       = rosetta::range{0, 200}, 
+       = rosetta::widget::slider, = rosetta::label{"Max iter"} ]]
+    int maxIter{100};
+
+    [[ = rosetta::doc{"Tell if the solver must be iterative"}, 
+       = rosetta::widget::checkbox, 
+       = rosetta::label{"Iterative solver"} ]]
+    bool iterative{true};
+
+    [[ = rosetta::doc{"Solver name"}, 
+       = rosetta::combobox{{"Seidel", "Jacobi", "gmres", "cgnr"}}, 
+       = rosetta::label{"Solver name"} ]]
     std::string solverName{"Seidel"};
-    
+
+    [[ = rosetta::doc{"Run the solver and return the convergence"}, 
+       = rosetta::button{"Run"} ]]
     double run() {return 1e-8;}
-    void   reset() {}
+
+    [[ = rosetta::doc{"Reset the solver"}, 
+       = rosetta::button{"Reset"} ]]
+    void reset() {}
 };
 
 Algo algo;
@@ -538,11 +550,14 @@ files, links them in. It's been a Qt fixture for 25 years.
 C++26 reflection makes it… optional.
 
 ```cpp
+using namespace rosetta;
+
 class Thermostat {
 public:
-    [[= moc::signal]] moc::Signal<double> temperatureChanged;
+    [[ = moc::signal ]]
+    moc::Signal<double> temperatureChanged;
 
-    [[= moc::property{"temperature", "temperatureChanged"}]]
+    [[ = moc::property{"temperature", "temperatureChanged"} ]]
     double m_temperature = 20.0;
 };
 ```
