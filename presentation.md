@@ -663,3 +663,37 @@ template <typename T> void bind(py::module_ &m, const char *py_name) {
     }
 }
 ```
+
+---
+
+## Calling a method
+
+```cpp
+struct Vector3 {
+    double x, y, z;
+    double length() const { return x*x + y*y + z*z; }
+    void   scale(double k) { x *= k; y *= k; z *= k; }
+};
+
+constexpr auto ctx = std::meta::access_context::current();
+
+// call a 0-arg method chosen by runtime name
+double call_by_name(const Vector3 &v, std::string_view name) {
+    double result = 0;
+    // unrolls the member list at compile time
+    template for (constexpr auto m : std::define_static_array(std::meta::members_of(^^Vector3, ctx)))
+    {
+        if constexpr (std::meta::is_function(m) && !std::meta::is_special_member_function(m)) {
+            if (std::meta::identifier_of(m) == name && std::meta::parameters_of(m).empty()) {
+                result = (v.[:m:])();
+            }
+        }
+    }
+    return result;
+}
+
+int main() {
+    Vector3 v{3.0, 4.0, 0.0};
+    std::println("{}", call_by_name(v, "length"));  // -> 25
+}
+```
