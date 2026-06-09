@@ -29,7 +29,11 @@ jobs:
 
       - name: Generate the light variant from the single source
         run: |
-          sed -e '/^class: invert$/d' -e 's/_class: invert /_class: /g' presentation.md > presentation-light.md
+          sed -e '/^class: invert$/d' \
+              -e 's/_class: invert /_class: /g' \
+              -e 's|href="light.html"|href="index.html"|' \
+              -e 's|🔆 Light version|🌙 Dark version|' \
+              presentation.md > presentation-light.md
 
       - name: Render dark deck (HTML)
         uses: docker://marpteam/marp-cli:latest

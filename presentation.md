@@ -16,6 +16,8 @@ class: invert
 
 June 11, 2026
 
+<a href="light.html" style="position:fixed;top:1.2em;right:1.2em;font-size:0.5em;opacity:0.65;text-decoration:none;">🔆 Light version</a>
+
 ---
 
 ## What is reflection?
@@ -32,7 +34,7 @@ P2996 — one of the **largest** proposals in C++ history since the introduction
 
 ---
 
-## Difference with Introspection
+## Reflection vs Introspection
 
 - Introspection = **reading** (observe only)
 - Reflection = **reading** + **acting** (observe and manipulate)

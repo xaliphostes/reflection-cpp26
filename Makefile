@@ -14,7 +14,11 @@ dark: $(SRC)
 #   - drops the global `class: invert` front-matter line
 #   - turns `<!-- _class: invert lead -->` into `<!-- _class: lead -->`
 light: $(SRC)
-	sed -e '/^class: invert$$/d' -e 's/_class: invert /_class: /g' $(SRC) > $(GEN)
+	sed -e '/^class: invert$$/d' \
+	    -e 's/_class: invert /_class: /g' \
+	    -e 's|href="light.html"|href="index.html"|' \
+	    -e 's|🔆 Light version|🌙 Dark version|' \
+	    $(SRC) > $(GEN)
 	$(MARP) $(GEN) --pdf -o presentation-light.pdf
 	rm -f $(GEN)
 
