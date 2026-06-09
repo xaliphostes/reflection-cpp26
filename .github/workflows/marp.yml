@@ -28,7 +28,8 @@ jobs:
         run: mkdir -p site && cp -R media site/media
 
       - name: Generate the light variant from the single source
-        run: sed -e '/^class: invert$/d' -e 's/_class: invert /_class: /g' presentation.md > presentation-light.md
+        run: |
+          sed -e '/^class: invert$/d' -e 's/_class: invert /_class: /g' presentation.md > presentation-light.md
 
       - name: Render dark deck (HTML)
         uses: docker://marpteam/marp-cli:latest
