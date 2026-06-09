@@ -2,23 +2,14 @@
 
 Presentation [**here**](https://xaliphostes.github.io/reflection-cpp26/)
 
-## Testing
-
-Go to the `tests/` folder and type
+## Generating the PDFs
 
 ```bash
-cmake -G Ninja -B build && cmake --build build
+make dark    # → presentation-dark.pdf  (uses class: invert as-is)
+make light   # → presentation-light.pdf (invert directives stripped)
+make all     # both
+make clean   # remove outputs
 ```
-
-## Auto Binding Examples (Python, node, REST, wasm)
-
-Go to the `examples/bindings` folder and read [this file](examples/bindings/README.md).
-
-This folder presents auto-binding for
-1. Python
-2. JavaScript (node)
-3. REST
-4. Webassembly
 
 ## Author
 

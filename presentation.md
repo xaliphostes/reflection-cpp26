@@ -32,6 +32,17 @@ P2996 — one of the **largest** proposals in C++ history since the introduction
 
 ---
 
+## Difference with Introspection
+
+- Introspection = **reading** (observe only)
+- Reflection = **reading** + **acting** (observe and manipulate)
+  
+➜ **Reflection** is the broader capability: **introspection** + the ability **to act** on what you discovered.
+
+As we will see, C++ P2996 is reflection 💪 not introspection.
+
+---
+
 ## Why should you care?
 
 One C++ description → *everything*:
@@ -492,15 +503,6 @@ engine.rootContext()->setContextProperty("inspector", &reflected);
 
 ## Qt example
 
-<style scoped>
-section { display: flex; flex-direction: column; }
-.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: center; }
-.cols pre { margin: 0; font-size: 0.6em; }
-.cols img { width: 100%; }
-</style>
-
-<div class="cols">
-
 ```cpp
 class Algo {
 public:
@@ -521,7 +523,7 @@ public:
     bool iterative{true};
 
     [[ = rosetta::doc{"Solver name"}, 
-       = rosetta::combobox{{"Seidel", "Jacobi", "gmres", "cgnr"}}, 
+       = rosetta::combobox{{"Seidel", "Jacobi", "gmres", "cgnr", "direct"}}, 
        = rosetta::label{"Solver name"} ]]
     std::string solverName{"Seidel"};
 
@@ -538,7 +540,33 @@ Algo algo;
 QWidget *inspector = rosetta::build_inspector<Algo>(algo, "Algo");
 ```
 
-![qml](media/qt.png)
+---
+
+# Qt example
+
+<style scoped>
+section { display: flex; flex-direction: column; }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: start; }
+.cols pre { margin: 0; font-size: 0.6em; }
+.cols figure { margin: 0; }
+.cols img { width: 100%; }
+.cols figcaption { text-align: center; font-size: 0.7em; margin-top: 0.4em; }
+</style>
+
+<div class="cols">
+
+
+<figure>
+<figcaption><b>Without</b> annotation</figcaption>
+<img src="media/qt.png" alt="qml" />
+</figure>
+
+<figure>
+<figcaption><b>With</b> annotation</figcaption>
+<img src="media/qt_annotation.png" alt="qml" />
+</figure>
+
+</div>
 
 ---
 
@@ -553,7 +581,7 @@ const auto md = rosetta::generate_markdown<Algo>();
 
 ---
 
-### Algo
+### Algo (markdown preview)
 
 #### Fields
 
@@ -620,9 +648,9 @@ Three failure modes, all at compile time:
 # References
 
 - [Reflection proposal](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2996r13.html)
+- [Annotations for reflection](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3394r2.html)
 - [Python Bindings with Value-Based Reflection](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p2911r0.pdf)
 - [Using Reflection to Replace a Metalanguage for Generating JS Bindings](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p3010r0.pdf)
-- [Short video presentation for bindings](https://www.youtube.com/watch?v=TOKP7k66VBw)
 
 ---
 
@@ -683,9 +711,11 @@ double call_by_name(const Vector3 &v, std::string_view name) {
     // unrolls the member list at compile time
     template for (constexpr auto m : std::define_static_array(std::meta::members_of(^^Vector3, ctx)))
     {
-        if constexpr (std::meta::is_function(m) && !std::meta::is_special_member_function(m)) {
-            if (std::meta::identifier_of(m) == name && std::meta::parameters_of(m).empty()) {
-                result = (v.[:m:])();
+        if constexpr (std::meta::is_function(m) && !std::meta::is_special_member_function(m))
+        {
+            if (std::meta::identifier_of(m) == name && std::meta::parameters_of(m).empty())
+            {
+                result = (v.[:m:])(); // :-)
             }
         }
     }
