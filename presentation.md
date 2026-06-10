@@ -77,7 +77,7 @@ typename [: info :] c = {.name = "c", .radius = 1.0}; // splice it back into cod
 
 ## Why not earlier?
 
-
+- Not yet ready before (`constexpr`/`constval`/`template for`...)?
 
 ---
 
@@ -307,18 +307,20 @@ constexpr auto v = [: parse_json(json_data) :];
 
 Means: "Run `parse_json(json_data)` at **compile time**, obtain a reflected representation of some C++ entity or expression, and substitute the corresponding C++ code here."
 
+➜ *we cannot inject methods into it with the current C++26 facility*
+
 ---
 
 ## The example of Rosetta
 
-<img src="media/logo-rosetta.png" alt="rosetta2" width="300">
+<img src="media/logo-rosetta.png" alt="rosetta" width="300">
 
 - A C++ introspection & automatic language binding.
 - Non intrusif
 - Introspection **at runtime**
 - Hand written registration à la `pybind11`
 
-https://github.com/xaliphostes/rosetta2
+https://github.com/xaliphostes/rosetta
 
 ---
 
