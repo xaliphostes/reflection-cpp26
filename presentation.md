@@ -436,6 +436,7 @@ The alternative is **N hand-maintained binding files** that drift as the C++ API
 
 **REST / RPC:** each method → endpoint, each parameter → JSON field.
 
+
 ---
 
 ## Annotation is the leverage
