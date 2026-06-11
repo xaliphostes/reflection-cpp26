@@ -417,10 +417,9 @@ The alternative is **N hand-maintained binding files** that drift as the C++ API
 
 - **Validation** — range, regex, not-null, cross-field invariants (from annotations).
 - **Documentation** — Markdown / HTML / OpenAPI / Sphinx from `doc("…")`.
-- **Persistence / ORM (object relational mapping)** — `CREATE TABLE`, migrations from class diffs.
-- **Configuration & DI (dependency injection)** — config-file → object hydration, CLI flag generation.
 - **Live scripting / REPL (read-eval-print loop)** — every method auto-callable from the console.
 - **Testing** — property-based, fuzzing, snapshot tests, binding-coverage.
+- ...
 
 ---
 
@@ -436,12 +435,6 @@ The alternative is **N hand-maintained binding files** that drift as the C++ API
 - ...
 
 **REST / RPC:** each method → endpoint, each parameter → JSON field.
-
-```cpp
-for (auto cls : registry.list_classes())
-    for (auto m : cls->methods())
-        router.add(cls->name + "/" + m.name, &dispatch);
-```
 
 ---
 
