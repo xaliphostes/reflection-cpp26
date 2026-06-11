@@ -37,9 +37,9 @@ P2996 — one of the **largest** proposals in C++ history since the introduction
 ## Reflection vs Introspection
 
 - Introspection = **reading** (observe only)
-- Reflection = **reading** + **acting** (observe and manipulate)
+- Reflection = **reading** + **acting** (observe and manipulate).
   
-➜ **Reflection** is the broader capability: **introspection** + the ability **to act** on what you discovered.
+➜ **Reflection** is the broader capability: **introspection** + the ability **to act** on what you discovered (**code injection**)
 
 As we will see, C++ P2996 is reflection 💪 not introspection.
 
@@ -72,6 +72,21 @@ typename [: info :] c = {.name = "c", .radius = 1.0}; // splice it back into cod
 - Everything that crosses the boundary is `consteval` / `constexpr`
 - `^^T` lifts the *name* `T` into a constexpr value (`std::meta::info`)
 - `[: info :]` drops a `std::meta::info` value back into a *type*, *expression*, or *member*
+
+---
+
+## `template for` (Expansion statements)
+
+To loop over a collection at compile time
+
+```cpp
+template for (constexpr auto e : std::meta::enumerators_of(^^MyEnum)) {
+    
+    // Need constexpr to use [:e:]
+    ...
+    
+}
+```
 
 ---
 
@@ -118,6 +133,7 @@ C++ was **the only major language without first-class reflection** — until now
   | **GCC 16.1+** | ✅ Almost done | ✅ | 
   | **Clang (Bloomberg)** | ✅ Almost done | ✅ (`-freflection-latest`) | 
   | **Clang mainline** | 🟡 Partial | 🟡 In progress |
+  | **NVC++** | 🟡 Partial | 🟡 |
   | **MSVC** | ❌ | ❌ | 
   | **EDG** | 🟡 Partial | 🟡 | 
 
@@ -653,8 +669,7 @@ Three failure modes, all at compile time:
 
 - [Reflection proposal](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2996r13.html)
 - [Annotations for reflection](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3394r2.html)
-- [Python Bindings with Value-Based Reflection](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p2911r0.pdf)
-- [Using Reflection to Replace a Metalanguage for Generating JS Bindings](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p3010r0.pdf)
+- [All infos about `<meta>`](https://www.cppreference.com/cpp/header/meta)
 
 ---
 
