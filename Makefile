@@ -8,7 +8,7 @@ all: dark light
 
 # Dark deck: built straight from the canonical source (has `class: invert`).
 dark: $(SRC)
-	$(MARP) $(SRC) --pdf -o presentation-dark.pdf
+	$(MARP) $(SRC) --pdf --allow-local-files -o presentation-dark.pdf
 
 # Light deck: same content, with every `invert` directive stripped out.
 #   - drops the global `class: invert` front-matter line
@@ -19,7 +19,7 @@ light: $(SRC)
 	    -e 's|href="light.html"|href="index.html"|' \
 	    -e 's|🔆 Light version|🌙 Dark version|' \
 	    $(SRC) > $(GEN)
-	$(MARP) $(GEN) --pdf -o presentation-light.pdf
+	$(MARP) $(GEN) --pdf --allow-local-files -o presentation-light.pdf
 	rm -f $(GEN)
 
 clean:
